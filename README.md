@@ -9,7 +9,8 @@ With the transition to low-carbon energy sources gaining urgency, this analysis 
 ## Files
 - `EnergyMarketsProject.Rmd`: The R Markdown script with code, commentary, and visualizations.
 - `EnergyMarketsProject.html`: A standalone, HTML report.
-- `Risk-and-Return-in-the-Energy-Sector`: Folder containing the datasets used (if applicable).
+- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy (2015–2024).pdf`: Write-Up of results
+- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy Presentation (2015–2024).pdf`: Presentation of results
 
 ## Results Preview
 Key findings:

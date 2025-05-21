@@ -1,0 +1,498 @@
+---
+title: "Risk and Return in the Energy Sector: A Financial Case for Nuclear Energy (2015–2024)"
+author: "Sean Heard"
+date: "2025-05-21"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(purrr)
+library(quantmod)
+library(ggplot2)
+library(tidyr)
+library(xts)
+library(forcats)
+```
+
+```{r}
+# Download daily closing prices for 4 Nuclear Energy stocks (CCJ, BWXT, LEU, ETR)
+# plus 1 Nuclear Energy ETF (NLR) from Yahoo Finance, spanning 2015 to 2024
+getSymbols(c("CCJ", "BWXT", "LEU", "ETR", "NLR"), src = "yahoo", from = "2015-01-01", to = "2024-12-31")
+
+# Merge closing prices into one xts object and rename columns for clarity
+nuclear_data <- merge(Cl(CCJ), Cl(BWXT), Cl(LEU), Cl(ETR), Cl(NLR))
+colnames(nuclear_data) <- c("CCJ", "BWXT", "LEU", "ETR", "NLR")
+
+# Convert to dataframe and add a new column with the average price of all 5 instruments by date
+nuclear_data_df <- data.frame(Date = index(nuclear_data), coredata(nuclear_data))
+nuclear_data_df$Nuclear_Avg <- rowMeans(nuclear_data_df[, c("CCJ", "BWXT", "LEU", "ETR", "NLR")], na.rm = TRUE)
+
+# Plot price trends for each stock and ETF, plus the average (dashed line)
+ggplot(nuclear_data_df, aes(x = Date)) +
+  geom_line(aes(y = CCJ, color = "CCJ")) +
+  geom_line(aes(y = BWXT, color = "BWXT")) +
+  geom_line(aes(y = LEU, color = "LEU")) +
+  geom_line(aes(y = ETR, color = "ETR")) +
+  geom_line(aes(y = NLR, color = "NLR (ETF)")) +
+  geom_line(aes(y = Nuclear_Avg, color = "Average"), linetype = "dashed") +  
+  labs(title = "Nuclear Stocks Comparison", x = "Date", y = "Price") +
+  scale_color_manual(values = c("black", "green", "red", "purple", "blue", "orange")) +  
+  theme_minimal()
+
+```
+```{r}
+# Repeat data download, processing, and plotting steps for Fossil Fuel Energy stocks and ETF
+getSymbols(c("XOM", "CVX", "BP", "SHEL", "XLE"), src = "yahoo", from = "2015-01-01", to = "2024-12-31")
+
+fossil_fuel_data <- merge(Cl(XOM), Cl(CVX), Cl(BP), Cl(SHEL), Cl(XLE))
+colnames(fossil_fuel_data) <- c("XOM", "CVX", "BP", "SHEL", "XLE")
+
+fossil_fuel_data_df <- data.frame(Date = index(fossil_fuel_data), coredata(fossil_fuel_data))
+fossil_fuel_data_df$Fossil_Avg <- rowMeans(fossil_fuel_data_df[, c("XOM", "CVX", "BP", "SHEL", "XLE")], na.rm = TRUE)
+
+ggplot(fossil_fuel_data_df, aes(x = Date)) +
+  geom_line(aes(y = XOM, color = "XOM")) +
+  geom_line(aes(y = CVX, color = "CVX")) +
+  geom_line(aes(y = BP, color = "BP")) +
+  geom_line(aes(y = SHEL, color = "SHEL")) +
+  geom_line(aes(y = XLE, color = "XLE (ETF)")) +
+  geom_line(aes(y = Fossil_Avg, color = "Average"), linetype = "dashed") +  
+  labs(title = "Fossil Fuel Stocks Comparison", x = "Date", y = "Price") +
+  scale_color_manual(values = c("black", "green", "red", "purple", "blue", "orange")) + 
+  theme_minimal()
+```
+
+```{r}
+# Repeat data download, processing, and plotting steps for Renewable Energy stocks and ETF
+getSymbols(c("NEE", "ENPH", "SEDG", "FSLR", "TAN"), src = "yahoo", from = "2015-01-01", to = "2024-12-31")
+
+renewables_data <- merge(Cl(NEE), Cl(ENPH), Cl(SEDG), Cl(FSLR), Cl(TAN))
+colnames(renewables_data) <- c("NEE", "ENPH", "SEDG", "FSLR", "TAN")
+
+renewables_data_df <- data.frame(Date = index(renewables_data), coredata(renewables_data))
+renewables_data_df$Renewables_Avg <- rowMeans(renewables_data_df[, c("NEE", "ENPH", "SEDG", "FSLR", "TAN")], na.rm = TRUE)
+
+ggplot(renewables_data_df, aes(x = Date)) +
+  geom_line(aes(y = NEE, color = "NEE")) +
+  geom_line(aes(y = ENPH, color = "ENPH")) +
+  geom_line(aes(y = SEDG, color = "SEDG")) +
+  geom_line(aes(y = FSLR, color = "FSLR")) +
+  geom_line(aes(y = TAN, color = "TAN (ETF)")) +
+  geom_line(aes(y = Renewables_Avg, color = "Average"), linetype = "dashed") +
+  labs(title = "Renewables (Solar & Wind) Stocks Comparison", x = "Date", y = "Price") +
+  scale_color_manual(values = c("black", "green", "red", "purple", "blue", "orange")) +
+  theme_minimal()
+```
+
+```{r}
+# Convert average price columns from wide to long format for each energy sector
+nuclear_avg <- nuclear_data_df %>%
+  select(Date, Nuclear_Avg) %>%
+  pivot_longer(cols = Nuclear_Avg, names_to = "Sector", values_to = "Price")
+
+fossil_avg <- fossil_fuel_data_df %>%
+  select(Date, Fossil_Avg) %>%
+  pivot_longer(cols = Fossil_Avg, names_to = "Sector", values_to = "Price")
+
+renewables_avg <- renewables_data_df %>%
+  select(Date, Renewables_Avg) %>%
+  pivot_longer(cols = Renewables_Avg, names_to = "Sector", values_to = "Price")
+
+# Combine all sector averages into a single dataframe
+averages_long <- bind_rows(nuclear_avg, fossil_avg, renewables_avg)
+
+# Rename sector labels for clarity in the plot legend
+averages_long <- averages_long %>%
+  mutate(Sector = recode(Sector, "Nuclear_Avg" = "Nuclear", "Fossil_Avg" = "Fossil Fuels", "Renewables_Avg" = "Renewables"))
+
+# Define custom colors for each sector to improve plot readability
+custom_colors <- c("Nuclear" = "#E76F51", "Fossil Fuels" = "#264653", "Renewables" = "#2A9D8F")
+
+# Plot average stock prices by sector over time with customized colors and clean theme
+ggplot(averages_long, aes(x = Date, y = Price, color = Sector)) +
+  geom_line() +
+  labs(title = "Average Stock (Including ETF's) Price by Sector",
+       x = "Date", y = "Average Closing Price",
+       color = "Sector") +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal()
+
+```
+
+```{r}
+# Convert daily nuclear stock prices to quarterly OHLC data, using last day of each quarter as index
+nuclear_quarterly <- to.quarterly(nuclear_data, indexAt = "lastof", drop.time = TRUE)
+
+# Convert the quarterly xts object to a dataframe with Date and OHLC columns
+nuclear_quarterly_df <- data.frame(Date = index(nuclear_quarterly), coredata(nuclear_quarterly))
+
+# Rename columns to indicate they are closing prices of each stock for the quarter
+colnames(nuclear_quarterly_df) <- c("Date", "CCJ.Close", "BWXT.Close", "LEU.Close", "ETR.Close")
+
+# Calculate the average closing price across the four nuclear stocks for each quarter
+nuclear_quarterly_df$Nuclear_Avg <- rowMeans(nuclear_quarterly_df[, c("CCJ.Close", "BWXT.Close", "LEU.Close", "ETR.Close")], na.rm = TRUE)
+
+# Compute the quarterly percent change in the average nuclear stock price
+nuclear_quarterly_df$Nuclear_Pct_Change <- c(NA, diff(nuclear_quarterly_df$Nuclear_Avg) / head(nuclear_quarterly_df$Nuclear_Avg, -1) * 100)
+
+# Plot the quarterly percent change with a reference line at 0% for context
+ggplot(nuclear_quarterly_df, aes(x = Date, y = Nuclear_Pct_Change)) +
+  geom_line(color = "#E76F51") +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  labs(title = "Quarterly Percentage Change of Nuclear Stock Average (Excluding ETF: NLR)",
+       x = "Date", y = "Percent Change (%)") +
+  theme_minimal()
+```
+
+```{r}
+# Repeat process as for nuclear: convert to quarterly, extract close prices, compute average & % change, then plot
+fossil_fuel_quarterly <- to.quarterly(fossil_fuel_data, indexAt = "lastof", drop.time = TRUE)
+fossil_fuel_quarterly_df <- data.frame(Date = index(fossil_fuel_quarterly), coredata(fossil_fuel_quarterly))
+
+colnames(fossil_fuel_quarterly_df) <- c("Date", "XOM.Close", "CVX.Close", "BP.Close", "SHEL.Close")
+
+fossil_fuel_quarterly_df$Fossil_Avg <- rowMeans(fossil_fuel_quarterly_df[, c("XOM.Close", "CVX.Close", "BP.Close", "SHEL.Close")], na.rm = TRUE)
+
+fossil_fuel_quarterly_df$Fossil_Pct_Change <- c(NA, diff(fossil_fuel_quarterly_df$Fossil_Avg) / head(fossil_fuel_quarterly_df$Fossil_Avg, -1) * 100)
+
+ggplot(fossil_fuel_quarterly_df, aes(x = Date, y = Fossil_Pct_Change)) +
+  geom_line(color = "#264653") +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  labs(title = "Quarterly Percentage Change of Fossil Fuel Stock Average (Excluding ETF: XLE)",
+       x = "Date", y = "Percent Change (%)") +
+  theme_minimal()
+```
+
+
+```{r}
+# Repeat process as for nuclear: convert to quarterly, extract close prices, compute average & % change, then plot
+renewables_quarterly <- to.quarterly(renewables_data, indexAt = "lastof", drop.time = TRUE)
+renewables_quarterly_df <- data.frame(Date = index(renewables_quarterly), coredata(renewables_quarterly))
+
+colnames(renewables_quarterly_df) <- c("Date", "NEE.Close", "ENPH.Close", "SEDG.Close", "FSLR.Close")
+
+renewables_quarterly_df$Renewables_Avg <- rowMeans(renewables_quarterly_df[, c("NEE.Close", "ENPH.Close", "SEDG.Close", "FSLR.Close")], na.rm = TRUE)
+
+renewables_quarterly_df$Renewables_Pct_Change <- c(NA, diff(renewables_quarterly_df$Renewables_Avg) / head(renewables_quarterly_df$Renewables_Avg, -1) * 100)
+
+ggplot(renewables_quarterly_df, aes(x = Date, y = Renewables_Pct_Change)) +
+  geom_line(color = "#2A9D8F") +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  labs(title = "Quarterly Percentage Change of Renewable Energy Stock Average (Excluding ETF: TAN)",
+       x = "Date", y = "Percent Change (%)") +
+  theme_minimal()
+```
+
+```{r}
+# Compute quarterly % change in average stock price for each energy sector
+nuclear_quarterly_df$Nuclear_Pct_Change <- c(NA, diff(nuclear_quarterly_df$Nuclear_Avg) / head(nuclear_quarterly_df$Nuclear_Avg, -1) * 100)
+
+fossil_fuel_quarterly_df$Fossil_Pct_Change <- c(NA, diff(fossil_fuel_quarterly_df$Fossil_Avg) / head(fossil_fuel_quarterly_df$Fossil_Avg, -1) * 100)
+
+renewables_quarterly_df$Renewables_Pct_Change <- c(NA, diff(renewables_quarterly_df$Renewables_Avg) / head(renewables_quarterly_df$Renewables_Avg, -1) * 100)
+
+
+# Merge quarterly % change from all sectors into one dataframe by Date
+combined_df <- merge(nuclear_quarterly_df[, c("Date", "Nuclear_Pct_Change")],
+                     fossil_fuel_quarterly_df[, c("Date", "Fossil_Pct_Change")],
+                     by = "Date", all = TRUE)
+combined_df <- merge(combined_df, renewables_quarterly_df[, c("Date", "Renewables_Pct_Change")],
+                     by = "Date", all = TRUE)
+
+# Plot sector % changes over time with distinct colors and a 0% baseline
+ggplot(combined_df, aes(x = Date)) +
+  geom_line(aes(y = Nuclear_Pct_Change, color = "Nuclear")) +
+  geom_line(aes(y = Fossil_Pct_Change, color = "Fossil Fuels")) +
+  geom_line(aes(y = Renewables_Pct_Change, color = "Renewables")) +
+  labs(title = "Quarterly Percentage Change Comparison",
+       x = "Year", y = "Percent Change (%)") +
+  scale_color_manual(values = c(
+  "Nuclear" = "#E76F51",
+  "Fossil Fuels" = "#264653",
+  "Renewables" = "#2A9D8F"
+)) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  theme_minimal() +
+  theme(legend.title = element_blank())
+```
+
+
+```{r}
+# Load ETF data from Yahoo Finance for the date range 2015–2024
+getSymbols(c("NLR", "XLE", "TAN"), src = "yahoo", from = "2015-01-01", to = "2024-12-31")
+
+# Convert each ETF's daily data to quarterly, retaining only the closing price
+NLR_quarterly <- Cl(to.quarterly(NLR, indexAt = "lastof", drop.time = TRUE))
+XLE_quarterly <- Cl(to.quarterly(XLE, indexAt = "lastof", drop.time = TRUE))
+TAN_quarterly  <- Cl(to.quarterly(TAN,  indexAt = "lastof", drop.time = TRUE))
+
+# Merge all three
+etf_quarterly <- merge(NLR_quarterly, XLE_quarterly, TAN_quarterly)
+colnames(etf_quarterly) <- c("NLR", "XLE", "TAN")
+
+# Convert xts object to data frame for easier manipulation
+etf_quarterly_df <- data.frame(Date = index(etf_quarterly), coredata(etf_quarterly))
+
+# Calculate quarter-over-quarter percentage change for each ETF
+etf_quarterly_df$NLR_Pct <- c(NA, diff(etf_quarterly_df$NLR) / head(etf_quarterly_df$NLR, -1) * 100)
+etf_quarterly_df$XLE_Pct <- c(NA, diff(etf_quarterly_df$XLE) / head(etf_quarterly_df$XLE, -1) * 100)
+etf_quarterly_df$TAN_Pct  <- c(NA, diff(etf_quarterly_df$TAN)  / head(etf_quarterly_df$TAN, -1)  * 100)
+
+# Reshape the data to long format for easier plotting
+etf_pct_long <- pivot_longer(
+  etf_quarterly_df,
+  cols = c("NLR_Pct", "XLE_Pct", "TAN_Pct"),
+  names_to = "ETF",
+  values_to = "Pct_Change"
+)
+# Clean ETF's name
+etf_pct_long$ETF <- gsub("_Pct", "", etf_pct_long$ETF)
+
+# Plot the quarterly percentage change for each ETF
+ggplot(etf_pct_long, aes(x = Date, y = Pct_Change, color = ETF)) +
+  geom_line() +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  scale_color_manual(values = c("NLR" = "#003049", "XLE" = "#F4A261", "TAN" = "#B9C46A")) +
+  labs(title = "Quarterly % Change: ETF in Each Sector (NLR, XLE, TAN)",
+       x = "Date", y = "Percent Change (%)", color = "ETF") +
+  theme_minimal()
+
+```
+
+
+
+```{r}
+# Create a combined data frame for the nuclear sector and NLR ETF
+nuclear_data <- data.frame(
+  Date = nuclear_quarterly_df$Date, 
+  Nuclear_Stocks = nuclear_quarterly_df$Nuclear_Pct_Change,  
+  NLR_ETF = etf_pct_long %>% filter(ETF == "NLR") %>% pull(Pct_Change)  
+)
+
+# Create a combined data frame for the renewables sector and TAN ETF
+renewables_data <- data.frame(
+  Date = renewables_quarterly_df$Date,
+  Renewables_Stocks = renewables_quarterly_df$Renewables_Pct_Change,
+  TAN_ETF = etf_pct_long %>% filter(ETF == "TAN") %>% pull(Pct_Change)
+)
+
+# Create a combined data frame for the fossil fuel sector and XLE ETF
+fossil_fuel_data <- data.frame(
+  Date = fossil_fuel_quarterly_df$Date,
+  Fossil_Fuels_Stocks = fossil_fuel_quarterly_df$Fossil_Pct_Change,
+  XLE_ETF = etf_pct_long %>% filter(ETF == "XLE") %>% pull(Pct_Change)
+)
+
+
+# Plot 1: Nuclear vs NLR ETF
+ggplot(nuclear_data, aes(x = Date)) +
+  geom_line(aes(y = Nuclear_Stocks, color = "Nuclear Stocks")) +
+  geom_line(aes(y = NLR_ETF, color = "NLR ETF")) +
+  labs(title = "Nuclear Sector vs NLR ETF Growth",
+       x = "Date", y = "Percentage Change") +
+  scale_color_manual(values = c("Nuclear Stocks" = "#E76F51", "NLR ETF" = "#003049")) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+# Plot 2: Renewables vs TAN ETF
+ggplot(renewables_data, aes(x = Date)) +
+  geom_line(aes(y = Renewables_Stocks, color = "Renewables Stocks")) +
+  geom_line(aes(y = TAN_ETF, color = "TAN ETF")) +
+  labs(title = "Renewables Sector vs TAN ETF Growth",
+       x = "Date", y = "Percentage Change") +
+  scale_color_manual(values = c("Renewables Stocks" = "#2A9D8F", "TAN ETF" = "#B9C46A")) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+# Plot 3: Fossil Fuels vs XLE ETF
+ggplot(fossil_fuel_data, aes(x = Date)) +
+  geom_line(aes(y = Fossil_Fuels_Stocks, color = "Fossil Fuels Stocks")) +
+  geom_line(aes(y = XLE_ETF, color = "XLE ETF")) +
+  labs(title = "Fossil Fuels Sector vs XLE ETF Growth",
+       x = "Date", y = "Percentage Change") +
+  scale_color_manual(values = c("Fossil Fuels Stocks" = "#264653", "XLE ETF" = "#F4A261")) +
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed") + 
+  theme_minimal() +
+  theme(legend.title = element_blank())
+```
+
+```{r}
+# Number of years
+years <- 10
+
+# Reconstruct a price series from a vector of percent changes
+reconstruct_prices <- function(pct_change_vector, start_price = 100) {
+  cum_returns <- cumprod(1 + pct_change_vector)
+  return(start_price * cum_returns)
+}
+
+# Calculate CAGR from a price series
+calc_cagr <- function(prices) {
+  start_price <- prices[1]
+  end_price <- prices[length(prices)]
+  if (is.na(start_price) || is.na(end_price)) return(NA)
+  return((end_price / start_price)^(1 / years) - 1)
+}
+
+# Compute the maximum drawdown from a price series
+max_drawdown <- function(prices) {
+  cummax_prices <- cummax(prices)
+  drawdowns <- (prices - cummax_prices) / cummax_prices
+  return(min(drawdowns))
+}
+
+# Create comparison metrics for nuclear sector and its ETF (NLR)
+nuclear_comparison <- data.frame(
+  Sector = c("Nuclear", "NLR"),
+  sd_return = c(
+    sd(nuclear_quarterly_df$Nuclear_Pct_Change, na.rm = TRUE),
+    sd(etf_pct_long %>% filter(ETF == "NLR") %>% pull(Pct_Change), na.rm = TRUE)
+  ),
+  sharpe_ratio = c(
+    ((mean(nuclear_quarterly_df$Nuclear_Pct_Change, na.rm = TRUE) - 0.00125) / 
+     sd(nuclear_quarterly_df$Nuclear_Pct_Change, na.rm = TRUE)) * sqrt(4),
+    ((mean(etf_pct_long %>% filter(ETF == "NLR") %>% pull(Pct_Change), na.rm = TRUE) - 0.00125) / 
+     sd(etf_pct_long %>% filter(ETF == "NLR") %>% pull(Pct_Change), na.rm = TRUE)) * sqrt(4)
+  ),
+  total_return = c(
+    sum(nuclear_quarterly_df$Nuclear_Pct_Change, na.rm = TRUE),
+    sum(etf_pct_long %>% filter(ETF == "NLR") %>% pull(Pct_Change), na.rm = TRUE)
+  ),
+  cagr = c(
+    calc_cagr(reconstruct_prices(nuclear_quarterly_df %>% filter(!is.na(Nuclear_Pct_Change)) %>% arrange(Date) %>% pull(Nuclear_Pct_Change) / 100)) * 100,
+    calc_cagr(reconstruct_prices(etf_pct_long %>% filter(ETF == "NLR", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  ),
+  final_cum_price = c(
+    tail(reconstruct_prices(nuclear_quarterly_df %>% filter(!is.na(Nuclear_Pct_Change)) %>% arrange(Date) %>% pull(Nuclear_Pct_Change) / 100), 1),
+    tail(reconstruct_prices(etf_pct_long %>% filter(ETF == "NLR", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100), 1)
+  ),
+  max_drawdown = c(
+    max_drawdown(reconstruct_prices(nuclear_quarterly_df %>% filter(!is.na(Nuclear_Pct_Change)) %>% arrange(Date) %>% pull(Nuclear_Pct_Change) / 100)) * 100,
+    max_drawdown(reconstruct_prices(etf_pct_long %>% filter(ETF == "NLR", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  )
+)
+
+# Create comparison metrics for renewables sector and its ETF (TAN)
+renewables_comparison <- data.frame(
+  Sector = c("Renewables", "TAN"),
+  sd_return = c(
+    sd(renewables_quarterly_df$Renewables_Pct_Change, na.rm = TRUE),
+    sd(etf_pct_long %>% filter(ETF == "TAN") %>% pull(Pct_Change), na.rm = TRUE)
+    ),
+  sharpe_ratio = c(
+    ((mean(renewables_quarterly_df$Renewables_Pct_Change, na.rm = TRUE) - 0.00125) / 
+     sd(renewables_quarterly_df$Renewables_Pct_Change, na.rm = TRUE)) * sqrt(4),
+    ((mean(etf_pct_long %>% filter(ETF == "TAN") %>% pull(Pct_Change), na.rm = TRUE) - 0.00125) / 
+     sd(etf_pct_long %>% filter(ETF == "TAN") %>% pull(Pct_Change), na.rm = TRUE)) * sqrt(4)
+  ),
+  total_return = c(
+    sum(renewables_quarterly_df$Renewables_Pct_Change, na.rm = TRUE),
+    sum(etf_pct_long %>% filter(ETF == "TAN") %>% pull(Pct_Change), na.rm = TRUE)
+    ),
+  cagr = c(
+    calc_cagr(reconstruct_prices(renewables_quarterly_df %>% filter(!is.na(Renewables_Pct_Change)) %>% arrange(Date) %>% pull(Renewables_Pct_Change) / 100)) * 100,
+    calc_cagr(reconstruct_prices(etf_pct_long %>% filter(ETF == "TAN", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  ),
+  final_cum_price = c(
+    tail(reconstruct_prices(renewables_quarterly_df %>% filter(!is.na(Renewables_Pct_Change)) %>% arrange(Date) %>% pull(Renewables_Pct_Change) / 100), 1),
+    tail(reconstruct_prices(etf_pct_long %>% filter(ETF == "TAN", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100), 1)
+  ),
+  max_drawdown = c(
+    max_drawdown(reconstruct_prices(renewables_quarterly_df %>% filter(!is.na(Renewables_Pct_Change)) %>% arrange(Date) %>% pull(Renewables_Pct_Change) / 100)) * 100,
+    max_drawdown(reconstruct_prices(etf_pct_long %>% filter(ETF == "TAN", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  )
+)
+
+# Create comparison metrics for fossil fuel sector and its ETF (XLE)
+fossil_fuel_comparison <- data.frame(
+  Sector = c("Fossil Fuels", "XLE"),
+  sd_return = c(
+    sd(fossil_fuel_quarterly_df$Fossil_Pct_Change, na.rm = TRUE),
+    sd(etf_pct_long %>% filter(ETF == "XLE") %>% pull(Pct_Change), na.rm = TRUE)
+    ),
+  sharpe_ratio = c(
+    ((mean(fossil_fuel_quarterly_df$Fossil_Pct_Change, na.rm = TRUE) - 0.00125) / 
+     sd(fossil_fuel_quarterly_df$Fossil_Pct_Change, na.rm = TRUE)) * sqrt(4),
+    ((mean(etf_pct_long %>% filter(ETF == "XLE") %>% pull(Pct_Change), na.rm = TRUE) - 0.00125) / 
+     sd(etf_pct_long %>% filter(ETF == "XLE") %>% pull(Pct_Change), na.rm = TRUE)) * sqrt(4)
+  ),
+  total_return = c(
+    sum(fossil_fuel_quarterly_df$Fossil_Pct_Change, na.rm = TRUE),
+    sum(etf_pct_long %>% filter(ETF == "XLE") %>% pull(Pct_Change), na.rm = TRUE)
+    ),
+  cagr = c(
+    calc_cagr(reconstruct_prices(fossil_fuel_quarterly_df %>% filter(!is.na(Fossil_Pct_Change)) %>% arrange(Date) %>% pull(Fossil_Pct_Change) / 100)) * 100,
+    calc_cagr(reconstruct_prices(etf_pct_long %>% filter(ETF == "XLE", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  ),
+  final_cum_price = c(
+    tail(reconstruct_prices(fossil_fuel_quarterly_df %>% filter(!is.na(Fossil_Pct_Change)) %>% arrange(Date) %>% pull(Fossil_Pct_Change) / 100), 1),
+    tail(reconstruct_prices(etf_pct_long %>% filter(ETF == "XLE", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100), 1)
+  ),
+  max_drawdown = c(
+    max_drawdown(reconstruct_prices(fossil_fuel_quarterly_df %>% filter(!is.na(Fossil_Pct_Change)) %>% arrange(Date) %>% pull(Fossil_Pct_Change) / 100)) * 100,
+    max_drawdown(reconstruct_prices(etf_pct_long %>% filter(ETF == "XLE", !is.na(Pct_Change)) %>% arrange(Date) %>% pull(Pct_Change) / 100)) * 100
+  )
+)
+
+# Combine all sector/ETF comparisons into one data frame for plotting
+comparison_data <- bind_rows(nuclear_comparison, renewables_comparison, fossil_fuel_comparison)
+
+# Reshape data to long format for visualization
+comparison_long <- comparison_data %>%
+  pivot_longer(cols = -Sector, names_to = "metric", values_to = "value")
+
+# Set factor levels for consistent sector ordering in plots
+comparison_long$Sector <- factor(comparison_long$Sector, 
+                                  levels = c("Nuclear", "NLR", 
+                                             "Renewables", "TAN", 
+                                             "Fossil Fuels", "XLE"))
+
+# Recode metric names to more descriptive labels
+comparison_long <- comparison_long %>%
+  mutate(metric = recode(metric,
+    "cagr" = "Compound Annual Growth Rate (%)",
+    "final_cum_price" = "Final Cumulative Price",
+    "max_drawdown" = "Max Drawdown (%)",
+    "mean_return" = "Mean Return (%)",
+    "total_return" = "Total Return (%)",
+    "sd_return" = "Standard Deviation (%)",
+    "sharpe_ratio" = "Sharpe Ratio"
+  ))
+
+# View the formatted data
+print(comparison_data)
+
+# Create a faceted bar chart comparing performance metrics across sectors and ETF's
+ggplot(comparison_long, aes(x = Sector, y = value, fill = Sector)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~ metric, scales = "free_y") +
+  labs(title = "Comparative Performance of Energy Sectors (2015–2024)",
+       y = "Value", x = "Sector") +
+  scale_fill_manual(values = c(
+    "Nuclear" = "#E76F51",
+    "NLR" = "#003049",
+    "Renewables" = "#2A9D8F",
+    "TAN" = "#B9C46A",
+    "Fossil Fuels" = "#264653",
+    "XLE" = "#F4A261"
+  )) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(size = 9)
+  )
+
+```
+
+

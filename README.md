@@ -7,10 +7,10 @@ This project explores the financial performance of the 3 main energy sectors: Nu
 With the transition to low-carbon energy sources gaining urgency, this analysis provides a financial case for nuclear energy compared to other alternatives. I believe that nuclear energy is going to be relied upon heavily in the future, and I wanted to see if the markets were also indicating that.
 
 ## Files
-- `EnergyMarketsProject.Rmd`: The R Markdown script with code, commentary, and visualizations.
-- `EnergyMarketsProject.html`: A standalone, HTML report.
-- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy (2015–2024).pdf`: Write-Up of results
-- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy Presentation (2015–2024).pdf`: Presentation of results
+- `EnergyMarketsProject.Rmd`: The R Markdown script with code and commentary.
+- `EnergyMarketsProject.html`: A standalone, HTML report, and visualizations.
+- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy (2015–2024).pdf`: Write-Up of results.
+- `Risk and Return in the Energy Sector_ A Financial Case for Nuclear Energy Presentation (2015–2024).pdf`: Presentation of results.
 
 ## Results Preview
 Key findings:

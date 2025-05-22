@@ -4,7 +4,7 @@
 This project explores the financial performance of the 3 main energy sectors: Nuclear, Renewables, Fossil Fuels, and related ETFs to each, using data from 2015 to 2024. The analysis covers metrics such as total return, Sharpe ratio, max drawdown, and more to evaluate the investment case for nuclear energy.
 
 ## Motivation
-With the transition to low-carbon energy sources gaining urgency, this analysis provides a financial case for nuclear energy compared to other alternatives. I believe that nuclear energy is going relied upon heavily and the future, and I wanted to see if the markets were also indicating that.
+With the transition to low-carbon energy sources gaining urgency, this analysis provides a financial case for nuclear energy compared to other alternatives. I believe that nuclear energy is going to be relied upon heavily and the future, and I wanted to see if the markets were also indicating that.
 
 ## Files
 - `EnergyMarketsProject.Rmd`: The R Markdown script with code, commentary, and visualizations.
